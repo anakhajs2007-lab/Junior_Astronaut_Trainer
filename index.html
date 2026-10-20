@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Junior Astronaut Mission Trainer</title>
+<style>
+:root{color-scheme:dark;--bg:#071326;--panel:#102440;--text:#f3f8ff;--muted:#b7cbe3;--cyan:#62e6ff;--green:#5dde93;--yellow:#ffd166;--red:#ff657a}
+*{box-sizing:border-box}body{margin:0;padding:24px 14px;min-height:100vh;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:radial-gradient(ellipse at top,#17365a 0%,var(--bg) 60%)}
+.app{max-width:900px;margin:0 auto}header,.panel{background:rgba(16,36,64,.96);border:1px solid #2c4d70;border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 10px 28px rgba(0,0,0,.18)}
+header{text-align:center}h1{color:var(--cyan);margin:0 0 8px;font-size:clamp(1.6rem,4vw,2.3rem)}h2,h3{margin-top:0}.subtitle{letter-spacing:.12em;color:var(--muted);font-size:.82rem}.moon{font-size:64px;margin:10px 0 0}
+.alert{background:#3b2d18;border:1px solid #b98526;color:#ffe6a3;border-radius:12px;padding:14px;margin-top:16px;text-align:left}.alert p{margin-bottom:0;line-height:1.5}
+.status{padding:13px 15px;border-radius:12px;background:#203650;border:1px solid #55d6f5;line-height:1.45}.status.success{border-color:var(--green);background:#143b35}.status.warning{border-color:var(--yellow);background:#3b321d}.status.danger{border-color:var(--red);background:#421f2b}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}@media(max-width:620px){.grid{grid-template-columns:1fr}}
+.resource{margin:14px 0}.resource-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px}.track,.progress-track{background:#35455d;border-radius:999px;height:15px;overflow:hidden}.fill{height:100%;width:100%;border-radius:inherit;transition:width .25s ease}.progress-fill{height:100%;width:0;background:linear-gradient(90deg,#36d6bb,#62e6ff);transition:width .25s ease}
+.mission-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.progress-label{color:var(--muted);font-size:.85rem;margin:8px 0 0}
+.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}button{border:1px solid #507295;border-radius:10px;padding:12px 15px;color:#f8fbff;background:#24466b;font-weight:700;cursor:pointer;font-size:.95rem}button:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px)}button.primary{background:#087e9b;border-color:#38c8e6}button.shield{background:#64428c;border-color:#a98bda}button:disabled{opacity:.42;cursor:not-allowed}
+.small{font-size:.88rem;color:var(--muted);line-height:1.5}.log{padding-left:22px;margin-bottom:0}.log li{margin:9px 0;line-height:1.4;overflow-wrap:anywhere}.log li:first-child{color:#bcefff}.learning{line-height:1.55}.learning strong{color:var(--cyan)}footer{text-align:center;color:var(--muted);font-size:.8rem;padding:4px 0 18px}
+</style>
+</head>
+<body>
+<main class="app">
+<header>
+<h1>🚀 Junior Astronaut Mission Trainer</h1><div class="subtitle">LUNAR OUTPOST • MISSION CONTROL</div><div class="moon" aria-hidden="true">🌕</div><h2>Survive 10 Days</h2>
+<div class="alert"><strong>☢️ Radiation Alert</strong><p>The Moon has no thick atmosphere or global magnetic field to protect astronauts like Earth's does. Watch for solar radiation events and use shielding when needed.</p></div>
+</header>
+<section class="panel" aria-label="Mission status">
+<div id="message" class="status" role="status" aria-live="polite">🟢 READY FOR LAUNCH — Commander, start your mission!</div>
+<div class="mission-top" style="margin-top:18px"><h2 style="margin:0">Mission Day <span id="day">0</span> / 10</h2><span id="missionState" class="small">Awaiting launch</span></div>
+<div class="progress-track" style="margin-top:12px"><div id="missionProgress" class="progress-fill"></div></div><p class="progress-label" id="progressLabel">Mission progress: 0%</p>
+</section>
+<div class="grid">
+<section class="panel"><h3>📦 Crew Resources</h3><div id="resources"></div><p class="small">Keep every resource above 0% to keep the crew safe.</p></section>
+<section class="panel"><h3>🛰️ Mission Actions</h3><p class="small">Each day consumes supplies. Save Water reduces daily water use. Refilling water costs power. Shielding protects against a solar radiation event when one occurs.</p>
+<div class="buttons" style="margin-top:12px"><button id="start" class="primary">🚀 Start Mission</button><button id="next" disabled>Next Day →</button><button id="save" disabled>💧 Save Water</button><button id="refillWater" disabled>💧 Refill Water (+20%)</button><button id="shield" class="shield" disabled>🛡️ Activate Shield (-15% power)</button><button id="restart">↻ Restart</button></div>
+<p class="small" style="margin-top:14px">Tip: Actions can be used between days. Shielding only helps during a radiation event and costs power to activate.</p></section>
+</div>
+<section class="panel learning"><h3>🧠 Mission Learning</h3><p><strong>Why manage resources?</strong> A lunar crew cannot quickly call for a delivery, so oxygen, water, food, and power must be carefully rationed.</p><p><strong>Why shielding?</strong> Space radiation can be more intense during solar particle events. A habitat's shielding and good mission planning help reduce exposure.</p><p id="lesson" class="small">Learning tip: conserve supplies early so the crew has a safety margin later in the mission.</p></section>
+<section class="panel"><h3>📡 Mission Log</h3><ul id="log" class="log"><li>Awaiting launch.</li></ul></section>
+<footer>Junior Astronaut Mission Trainer • Educational simulation, not a real mission operations tool.</footer>
+</main>
+<script>
+(() => {
+"use strict";
+const initial={oxygen:100,water:85,food:80,power:90};
+const meta={oxygen:{label:"Oxygen",icon:"🫁",color:"#55d6f5"},water:{label:"Water",icon:"💧",color:"#4c91ff"},food:{label:"Food",icon:"🥗",color:"#5dde93"},power:{label:"Power",icon:"⚡",color:"#ffd166"}};
+const $=id=>document.getElementById(id);
+let resources,day,running,finished,waterSaving,shieldReady;
+function addLog(message){const item=document.createElement("li");item.textContent=message;$("log").prepend(item);}
+function setMessage(message,kind=""){$("message").textContent=message;$("message").className="status"+(kind?" "+kind:"");}
+function render(){
+ $("resources").innerHTML=Object.entries(resources).map(([name,value])=>{const m=meta[name],rounded=Math.round(value),color=value<=25?"#ff657a":m.color;return `<div class="resource"><div class="resource-head"><span>${m.icon} ${m.label}</span><strong>${rounded}%</strong></div><div class="track" role="progressbar" aria-label="${m.label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rounded}"><div class="fill" style="width:${value}%;background:${color}"></div></div></div>`;}).join("");
+ const progress=Math.min(100,day*10);$("missionProgress").style.width=progress+"%";$("progressLabel").textContent="Mission progress: "+progress+"%";$("day").textContent=day;
+ $("missionState").textContent=finished?(day>=10&&Object.values(resources).every(v=>v>0)?"Mission complete":"Mission ended"):running?"Mission in progress":"Awaiting launch";
+}
+function updateButtons(){$("start").disabled=running||finished;$("next").disabled=!running||finished;$("save").disabled=!running||finished||waterSaving;$("refillWater").disabled=!running||finished||resources.water>=100||resources.power<10;$("shield").disabled=!running||finished||shieldReady||resources.power<15;}
+function reset(){
+ resources={...initial};day=0;running=false;finished=false;waterSaving=false;shieldReady=false;
+ $("log").innerHTML="<li>Awaiting launch.</li>";$("lesson").textContent="Learning tip: conserve supplies early so the crew has a safety margin later in the mission.";
+ setMessage("🟢 READY FOR LAUNCH — Commander, start your mission!");render();updateButtons();
+}
+function endMission(success,reason=""){
+ running=false;finished=true;
+ if(success){setMessage("🏆 MISSION SUCCESS! Your crew survived all 10 days with supplies remaining. Excellent planning, Commander!","success");$("lesson").textContent="Mission takeaway: balanced resource use and preparation helped your crew complete the lunar mission.";addLog("🏆 Mission success: all 10 days completed.");}
+ else{setMessage("🚨 MISSION FAILED — "+reason+" Restart and try a different strategy.","danger");$("lesson").textContent="Mission takeaway: review the log and conserve resources earlier. Try Save Water and plan refills before supplies become critical.";addLog("🚨 Mission failed: "+reason);}
+ updateButtons();render();
+}
+$("start").addEventListener("click",()=>{if(running||finished)return;running=true;setMessage("🚀 Mission launched! Check supplies and plan each day.");addLog("🚀 Mission launched. Crew systems are online.");updateButtons();render();});
+$("save").addEventListener("click",()=>{if(!running||finished||waterSaving)return;waterSaving=true;setMessage("💧 Water-saving mode activated. Daily water use is reduced.");$("lesson").textContent="Water conservation reduces daily consumption, leaving more water available for later days.";addLog("💧 Water-saving mode activated; daily water use is reduced.");updateButtons();});
+$("refillWater").addEventListener("click",()=>{if(!running||finished)return;if(resources.power<10){setMessage("⚠️ Not enough power to refill water. You need at least 10% power.","warning");return;}if(resources.water>=100){setMessage("💧 Water is already full.","warning");return;}const before=resources.water;resources.power=Math.max(0,resources.power-10);resources.water=Math.min(100,resources.water+20);setMessage("💧 Water refilled from "+Math.round(before)+"% to "+Math.round(resources.water)+"%. Power reduced by 10%.");addLog("💧 Refilled water (+20%, capped at 100%) using 10% power.");render();updateButtons();});
+$("shield").addEventListener("click",()=>{if(!running||finished||shieldReady)return;if(resources.power<15){setMessage("⚠️ Not enough power to activate shielding. You need 15% power.","warning");return;}resources.power=Math.max(0,resources.power-15);shieldReady=true;setMessage("🛡️ Radiation shield charged. It will protect the crew during the next solar event.");addLog("🛡️ Radiation shielding activated; 15% power used.");render();updateButtons();});
+$("next").addEventListener("click",()=>{
+ if(!running||finished)return;day++;
+ resources.oxygen=Math.max(0,resources.oxygen-5);resources.water=Math.max(0,resources.water-(waterSaving?3:5));resources.food=Math.max(0,resources.food-4);resources.power=Math.max(0,resources.power-4);
+ addLog("📅 Day "+day+" completed. Routine supplies consumed.");
+ const eventDays=[3,7,9];
+ if(eventDays.includes(day)){
+  if(shieldReady){shieldReady=false;addLog("☀️ Solar radiation event on Day "+day+": shield absorbed the event.");setMessage("☀️ Solar radiation event detected on Day "+day+", but your shield protected the crew.","success");$("lesson").textContent="Shielding costs power, so activate it strategically before a forecast solar event.";}
+  else{resources.power=Math.max(0,resources.power-8);resources.oxygen=Math.max(0,resources.oxygen-5);addLog("☢️ Solar radiation event on Day "+day+": no shield was active; extra system strain consumed 8% power and 5% oxygen.");setMessage("☢️ SOLAR RADIATION EVENT! No shield was active. The crew used extra power and oxygen to respond.","warning");$("lesson").textContent="Radiation events can strain life-support systems. Use shielding before Days 3, 7, or 9 when possible.";}
+ }
+ render();
+ const depleted=Object.entries(resources).find(([,v])=>v<=0);
+ if(depleted){endMission(false,meta[depleted[0]].label+" ran out.");return;}
+ if(day>=10){endMission(true);return;}
+ if(!eventDays.includes(day)){const low=Object.entries(resources).find(([,v])=>v<=25);if(low)setMessage("⚠️ "+meta[low[0]].label+" is running low ("+Math.round(low[1])+"%). Plan your next move, Commander.","warning");else setMessage("Day "+day+" complete. All systems are holding, Commander.");}
+ updateButtons();
+});
+$("restart").addEventListener("click",()=>{reset();addLog("↻ Mission restarted. All resources restored to initial levels.");});
+reset();
+})();
+</script>
+</body>
+</html>
